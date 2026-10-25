@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How much worse is the worst future than the best is good, under moral uncertainty? Set credences in CU, NLU and BAUB and normalisation methods, and read off the WORST:BEST ratio.">
+<title>Worst:Best Ratio Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: two columns on wide screens — the questions on the left, a sticky answer card on the right; one column (answer first) on phones. */
+:root{
+  --paper:#F5F6F8; --surface:#FFFFFF; --ink:#18202B; --ink-2:#465163; --muted:#6A7586; --rule:#DCE1E7; --rule-2:#EDF0F3;
+  --accent:#2F6DB5; --accent-soft:#E6EEF8; --suffer:#C4562E; --suffer-soft:#F8E9E3;
+  --display:"Newsreader", Georgia, "Times New Roman", serif;
+  --body:"Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#10141B; --surface:#161B24; --ink:#E7EBF0; --ink-2:#B4BDC9; --muted:#8792A2; --rule:#2A323E; --rule-2:#1E252F;
+  --accent:#5A90D2; --accent-soft:#1C2A3D; --suffer:#D46A43; --suffer-soft:#33221C; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --paper:#10141B; --surface:#161B24; --ink:#E7EBF0; --ink-2:#B4BDC9; --muted:#8792A2; --rule:#2A323E; --rule-2:#1E252F;
+  --accent:#5A90D2; --accent-soft:#1C2A3D; --suffer:#D46A43; --suffer-soft:#33221C; color-scheme:dark; }
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink); font-family:var(--body); font-size:15px; line-height:1.55; margin:0}
+.wrap{max-width:1140px; margin:0 auto; padding-inline:16px; padding-block:28px 56px}
+header.top{max-width:760px; display:grid; gap:10px; margin-bottom:26px}
+.eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600}
+h1{font-family:var(--display); font-weight:500; font-size:clamp(28px,4.2vw,40px); line-height:1.12; margin:0; text-wrap:balance; letter-spacing:-.01em}
+.lede{color:var(--ink-2); font-size:16px; max-width:66ch; margin:0}
+.formula{font-family:var(--mono); font-size:13px; color:var(--ink-2); background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:8px 12px; width:fit-content; max-width:100%; overflow-x:auto}
+.grid{display:grid; grid-template-columns:minmax(0,1fr) 370px; gap:28px; align-items:start}
+@media (max-width:900px){ .grid{grid-template-columns:minmax(0,1fr)} .answer{order:-1; position:static!important} }
+.steps{display:grid; gap:18px; min-width:0}
+.presets{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.presets span{font-size:13px; color:var(--muted); margin-right:4px}
+button.chip{font:inherit; font-size:13px; border:1px solid var(--rule); background:var(--surface); color:var(--ink); border-radius:999px; padding:5px 12px; cursor:pointer}
+button.chip:hover{border-color:var(--accent)}
+button.chip:focus-visible, input:focus-visible, select:focus-visible, label.opt:focus-within, .cmp button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+section.step{background:var(--surface); border:1px solid var(--rule); border-radius:var(--r); padding:18px 18px 20px; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; min-width:0}
+.step-h{display:flex; gap:12px; align-items:baseline}
+.num{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:6px; padding:1px 7px; flex:none}
+h2{font-family:var(--display); font-weight:500; font-size:21px; line-height:1.25; margin:0; text-wrap:balance}
+.help{color:var(--ink-2); font-size:14px; margin:0; max-width:68ch}
+.view{display:grid; grid-template-columns:minmax(0,1fr) 150px 54px; gap:6px 14px; align-items:center; padding-block:10px; border-top:1px solid var(--rule-2)}
+.view:first-of-type{border-top:0}
+.view .name{font-weight:600; font-size:14.5px}
+.view .desc{grid-column:1; color:var(--ink-2); font-size:13px}
+.view input[type=range]{grid-column:2; grid-row:1 / span 2; width:100%}
+.view .pct{grid-column:3; grid-row:1 / span 2; font-family:var(--mono); font-size:14px; text-align:right; font-variant-numeric:tabular-nums}
+.inline-num{font:inherit; font-family:var(--mono); font-size:13px; width:76px; padding:1px 6px; border:1px solid var(--rule); border-radius:6px; background:var(--paper); color:var(--ink)}
+select.inline-num{width:auto}
+select{max-width:100%}
+@media (max-width:520px){ .view{grid-template-columns:minmax(0,1fr) 54px} .view input[type=range]{grid-column:1 / span 2; grid-row:auto} .view .pct{grid-column:2; grid-row:1} }
+.q{display:grid; grid-template-columns:minmax(0,1fr); gap:8px; padding-top:14px; border-top:1px solid var(--rule-2); min-width:0}
+.q.first{border-top:0; padding-top:0}
+.q-title{font-weight:600; font-size:14.5px}
+.q-tag{font-size:12px; color:var(--muted)}
+.opts{display:grid; gap:6px}
+label.opt{display:flex; gap:10px; align-items:flex-start; padding:8px 10px; border:1px solid var(--rule); border-radius:8px; cursor:pointer; font-size:14px}
+label.opt:has(input:checked){border-color:var(--accent); background:var(--accent-soft)}
+label.opt input{margin-top:4px; accent-color:var(--accent)}
+label.opt small{display:block; color:var(--ink-2); font-size:12.5px}
+.qslider{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:center}
+.qslider output{font-family:var(--mono); font-size:15px; min-width:56px; text-align:right}
+.scale-ends{display:flex; justify-content:space-between; font-size:12px; color:var(--muted)}
+input[type=range]{accent-color:var(--accent)}
+.meta{display:grid; grid-template-columns:minmax(0,1fr); gap:10px; background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 14px}
+.mcred{display:grid; grid-template-columns:minmax(0,1fr) 120px 46px 92px; gap:8px 12px; align-items:center; font-size:13.5px}
+.mcred .pct, .mcred .rv{font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums; font-size:13px}
+.mcred .rv{color:var(--muted); text-align:right; white-space:nowrap}
+.mcred-head{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+@media (max-width:560px){ .mcred{grid-template-columns:minmax(0,1fr) 46px 92px} .mcred input{grid-column:1 / span 3; grid-row:2} }
+.q select.inline-num{width:100%; min-width:0; padding:5px 8px}
+.emp{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+@media (max-width:620px){ .emp{grid-template-columns:minmax(0,1fr)} }
+.emp label{display:grid; gap:4px; font-size:13.5px; font-weight:600}
+.emp label small{font-weight:400; color:var(--ink-2); font-size:12.5px}
+.emp input{font:inherit; font-family:var(--mono); padding:6px 8px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); width:100%}
+.answer{position:sticky; top:calc(env(safe-area-inset-top, 0px) + 16px); background:var(--surface); border:1px solid var(--rule); border-radius:var(--r); padding:20px; display:grid; grid-template-columns:minmax(0,1fr); gap:16px; min-width:0}
+.ans-label{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600}
+.hero{font-family:var(--body); font-weight:650; font-size:52px; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.hero .colon{color:var(--muted); font-weight:400}
+.approach-name{font-size:13.5px; color:var(--ink-2)}
+.reads{display:grid; gap:8px; font-size:14px; color:var(--ink-2); margin:0; padding:0; list-style:none}
+.reads li{padding-left:14px; position:relative}
+.reads li::before{content:""; position:absolute; left:0; top:.6em; width:6px; height:6px; border-radius:50%; background:var(--suffer)}
+.reads b{color:var(--ink); font-variant-numeric:tabular-nums}
+.ruler svg{display:block; width:100%; height:auto}
+.ruler text{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.cmp{display:grid; gap:6px}
+.cmp button{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; text-align:left; font:inherit; font-size:13.5px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:8px; padding:7px 10px; cursor:pointer}
+.cmp button[aria-pressed="true"]{border-color:var(--accent); background:var(--accent-soft)}
+.cmp button .v{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.drive{display:grid; gap:7px}
+.bar-row{display:grid; grid-template-columns:132px minmax(0,1fr) 84px; gap:8px; align-items:center; font-size:12.5px}
+.bar-row .lab{color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.bar-row .track{height:12px; background:var(--rule-2); border-radius:0 4px 4px 0; position:relative}
+.bar-row .fill{position:absolute; left:0; top:0; bottom:0; background:var(--suffer); border-radius:0 4px 4px 0; max-width:100%}
+.bar-row .val{font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums; color:var(--ink)}
+.refs{font-size:12.5px; color:var(--ink-2); display:grid; gap:3px; border-top:1px solid var(--rule-2); padding-top:12px}
+.refs div{display:flex; justify-content:space-between; gap:10px}
+.refs .v{font-family:var(--mono); color:var(--ink)}
+.note{font-size:12.5px; color:var(--muted); margin:0}
+.opt-group{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:8px 0 0}
+.opt-group:first-child{margin-top:0}
+.cmp .grp{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-top:4px}
+footer.foot{margin-top:28px; color:var(--ink-2); font-size:13px; max-width:760px; display:grid; gap:8px}
+footer.foot h3{font-family:var(--display); font-weight:500; font-size:18px; margin:6px 0 0; color:var(--ink)}
+footer.foot p{margin:0}
+footer.foot dl{margin:0; display:grid; gap:6px}
+footer.foot dt{font-weight:600; color:var(--ink)}
+footer.foot dd{margin:0 0 4px}
+footer.foot a{color:var(--accent)}
+sup{font-size:.7em}
+@media (prefers-reduced-motion: no-preference){ .fill{transition:width .25s ease} }
+</style>
+<style>
+.block{display:grid; gap:10px; background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 14px; transition:opacity .2s}
+.block.dim{opacity:.5}
+.alloc{display:grid; gap:7px}
+.alloc .bar-row{grid-template-columns:150px minmax(0,1fr) 52px}
+.alloc .fill.best{background:var(--accent)}
+.alloc .track{display:flex; border-radius:4px; overflow:hidden}
+.alloc .seg{height:100%}
+.alloc .seg.w{background:var(--suffer)} .alloc .seg.b{background:var(--accent)}
+.legend{display:flex; gap:14px; font-size:12px; color:var(--ink-2)}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+.costrow{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Moral uncertainty · working tool</div>
+    <h1>How much worse is the worst future than the best is good?</h1>
+    <p class="lede">Spread your credence across moral views, choose how to normalise them, and read off the WORST:BEST ratio <i>R</i>. Cutting the chance of WORST by one percentage point is worth raising the chance of BEST by <i>R</i> points. Extinction is the zero point on every view.</p>
+    <div class="formula">R = [V(extinction) − V(WORST)] ÷ [V(BEST) − V(extinction)]</div>
+  </header>
+
+  <div class="grid">
+    <div class="steps">
+      <div class="presets" role="group" aria-label="Presets">
+        <span>Start from:</span>
+        <button class="chip" data-preset="author">Will MacAskill’s view</button>
+        <button class="chip" data-preset="lowcu">CU at 10%</button>
+      </div>
+
+      <section class="step" aria-labelledby="s1h">
+        <div class="step-h"><span class="num">1</span><h2 id="s1h">How much credence do you give each view?</h2></div>
+        <div id="views"></div>
+      </section>
+
+      <section class="step" aria-labelledby="s2h">
+        <div class="step-h"><span class="num">2</span><h2 id="s2h">How should CU, NLU and BAUB be normalised?</h2></div>
+        <div class="opts" id="apprOpts"></div>
+
+        <div class="block" id="readBlock">
+          <div class="q-title">How likely is it that each view agrees with CU about BEST, rather than about WORST?</div>
+          <label class="q-tag" for="qIn">NLU</label>
+          <div class="qslider"><input type="range" id="qIn" min="0" max="100" step="0.5"><output id="qOut" for="qIn"></output></div>
+          <div class="scale-ends"><span>Agrees about WORST</span><span>Agrees about BEST</span></div>
+          <label class="q-tag" for="qBIn">BAUB</label>
+          <div class="qslider"><input type="range" id="qBIn" min="0" max="100" step="0.01"><output id="qBOut" for="qBIn"></output></div>
+          <div class="scale-ends"><span>Agrees about WORST</span><span>Agrees about BEST</span></div>
+        </div>
+
+        <div class="block" id="metaBlock">
+          <div class="q-title">Credence in each normalisation method</div>
+          <div class="mcred mcred-head"><span>Method</span><span></span><span style="text-align:right">Credence</span><span style="text-align:right">Its R</span></div>
+          <div id="mcreds"></div>
+          <label class="q-title" for="metaSel" style="font-size:13.5px">Normalise between the methods by</label>
+          <select id="metaSel" class="inline-num">
+            <option value="V">Variance (equal say for each method)</option>
+            <option value="R">Range</option>
+            <option value="W">Normalising at WORST</option>
+            <option value="B">Normalising at BEST</option>
+            <option value="cu">CU’s units</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="step" aria-labelledby="s3h">
+        <div class="step-h"><span class="num">3</span><h2 id="s3h">Other inputs</h2></div>
+        <div class="emp">
+          <label for="aIn">CU’s own ratio<small>1 means WORST is as bad as BEST is good.</small><input id="aIn" type="number" min="0.1" max="20" step="0.1"></label>
+          <label for="wSel">Outcome weights for variance<small>Equal, or your forecasts below.</small><select id="wSel" class="inline-num" style="width:100%;padding:6px 8px"><option value="eq">Equal</option><option value="fc">My forecasts</option></select></label>
+          <span></span>
+          <label for="pbIn">Chance of BEST (%)<input id="pbIn" type="number" min="0.0001" max="90" step="0.1"></label>
+          <label for="pwIn">Chance of WORST (%)<input id="pwIn" type="number" min="0.000001" max="50" step="0.01"></label>
+        </div>
+      </section>
+
+      <section class="step" aria-labelledby="s4h">
+        <div class="step-h"><span class="num">4</span><h2 id="s4h">Splitting or bargaining instead</h2></div>
+        <p class="help">These don’t give a ratio. Each view controls a share of resources equal to your credence in it, and spends it as its own ratio says. In this model, Nash bargaining with credences as weights gives the same allocation.</p>
+        <div class="costrow"><label for="costIn">Cost of cutting WORST’s chance by a point ÷ cost of raising BEST’s by a point</label><input id="costIn" class="inline-num" type="number" min="0.001" step="any"></div>
+        <div class="alloc" id="alloc"></div>
+        <div class="legend"><span><i style="background:var(--suffer)"></i>Avoiding WORST</span><span><i style="background:var(--accent)"></i>Promoting BEST</span></div>
+      </section>
+    </div>
+
+    <aside class="answer" aria-live="polite">
+      <div>
+        <div class="ans-label">Your WORST:BEST ratio</div>
+        <div class="hero" id="hero"></div>
+        <div class="approach-name" id="apprName"></div>
+      </div>
+      <ul class="reads" id="reads"></ul>
+      <div class="ruler" aria-hidden="true"><svg id="ruler" viewBox="0 0 330 60"></svg></div>
+      <div class="cmp" id="cmp" role="group" aria-label="Compare approaches"></div>
+      <div>
+        <div class="ans-label" style="margin-bottom:8px" id="driveTitle"></div>
+        <div class="drive" id="drive"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="foot">
+    <h3>How it works</h3>
+    <p>Three outcomes: BEST, extinction (zero on every view) and WORST. Each view’s own values are (1, 0, −<i>k</i>): CU’s <i>k</i> is its own ratio <i>a</i>, NLU’s is <i>a</i> times its multiplier, and BAUB’s is <i>a</i> × 10<sup>n</sup>. Every method rescales all three views, then takes the credence-weighted sum.</p>
+    <dl>
+      <dt>Normalising at WORST or at BEST</dt><dd>The views agree on the gap between extinction and WORST (or BEST). At WORST, NLU’s and BAUB’s large ratios become a discount on goods; at BEST, extra weight on bads.</dd>
+      <dt>Range and variance</dt><dd>Each view’s gap between BEST and WORST, or its standard deviation across the three outcomes, is set equal.</dd>
+      <dt>Expected value in a view’s units</dt><dd>With some credence that a view agrees with CU about BEST and some that it agrees about WORST, take the expectation holding that view’s values fixed across the readings. The answer depends on whose units are held fixed: the two-envelope problem.</dd>
+      <dt>Variance between the readings</dt><dd>Each combination of readings gives a verdict; each verdict is scaled to the same variance and weighted by your credence in it. No view’s units are held fixed.</dd>
+      <dt>Equal say between the units</dt><dd>Each of those expected-value calculations, for the units whose exchange rate with CU’s is uncertain, is scaled to the same variance and given equal weight.</dd>
+      <dt>Even-handed average</dt><dd>A view whose own ratio is <i>k</i>, with credence <i>q</i> that it agrees with CU about BEST, gets <i>k</i><sup>q</sup> times CU’s weight on WORST. This averages the exchange rate on a log scale; it isn’t expected value.</dd>
+      <dt>Spread across methods</dt><dd>Each method’s combined value function is normalised again by the chosen rule and weighted by your credence in the method.</dd>
+    </dl>
+    <p>Built by Claude for Forethought, October 2026. Your settings are kept only in this browser.</p>
+  </footer>
+</div>
+
+<script>
+// ---------- model (matches wbr_replicate.py) ----------
+const VIEWS=[
+  {id:'cu',name:'Classical utilitarianism (CU)',short:'CU'},
+  {id:'nlu',name:'Negative-leaning utilitarianism (NLU)',short:'NLU'},
+  {id:'baub',name:'Bounded above, unbounded below (BAUB)',short:'BAUB'}
+];
+const METHODS=[
+  {id:'W',name:'Normalise at WORST',sub:'CU, NLU and BAUB agree on how bad WORST is.'},
+  {id:'B',name:'Normalise at BEST',sub:'CU, NLU and BAUB agree on how good BEST is.'},
+  {id:'R',name:'Range',sub:'Each view’s gap between BEST and WORST is set equal.'},
+  {id:'V',name:'Variance',sub:'Each view’s values have the same spread across the outcomes.'}
+];
+const UNSURE=[
+  {id:'u_cu',name:'Expected value in CU’s units',short:'EV, CU’s units'},
+  {id:'u_nlu',name:'Expected value in NLU’s units',short:'EV, NLU’s units'},
+  {id:'u_baub',name:'Expected value in BAUB’s units',short:'EV, BAUB’s units'},
+  {id:'vread',name:'Variance between the readings',short:'Variance between readings',sub:'Each reading’s verdict scaled to the same spread, weighted by your credence in it.'},
+  {id:'eqsay',name:'Equal say between the units',short:'Equal say between units',sub:'Each expected-value calculation above scaled to the same spread, with equal weight.'},
+  {id:'even',name:'Even-handed average (not expected value)',short:'Even-handed average'}
+];
+const SPREAD={id:'spread',name:'Spread credence across the four methods',short:'Spread across methods'};
+const GROUPS=[
+  {title:'One normalisation method',items:METHODS},
+  {title:'Unsure whether the views agree with CU about BEST or WORST',items:UNSURE},
+  {title:'Unsure which normalisation method',items:[SPREAD]}
+];
+const ALL=[...METHODS,...UNSURE,SPREAD];
+const NAME=Object.fromEntries(ALL.map(a=>[a.id,a.name]));
+const SHORT=Object.fromEntries(ALL.map(a=>[a.id,a.short||a.name]));
+
+const DEFAULTS={cred:{cu:50,nlu:20,baub:30},m:1000,logK:22,a:1,q:7.7,qB:0,appr:'spread',
+  mc:{B:5,W:60,R:5,V:30},meta:'V',wmode:'eq',pB:10,pW:1,cost:3};
+const PRESETS={author:{},lowcu:{cred:{cu:10,nlu:36,baub:54}}};
+const KEY='wbr-state-v10';
+const state=JSON.parse(JSON.stringify(DEFAULTS));
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s)Object.assign(state,s);}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+
+function creds(){const t=VIEWS.reduce((s,v)=>s+(+state.cred[v.id]||0),0)||1;const o={};for(const v of VIEWS)o[v.id]=(+state.cred[v.id]||0)/t;return o;}
+function weights(){
+  if(state.wmode!=='fc')return[1/3,1/3,1/3];
+  let pB=Math.max(1e-8,state.pB/100),pW=Math.max(1e-10,state.pW/100);
+  if(pB+pW>0.999){const s=0.999/(pB+pW);pB*=s;pW*=s;}
+  return[pB,1-pB-pW,pW];
+}
+function ownK(){const a=state.a;return{cu:a,nlu:a*state.m,baub:a*Math.pow(10,state.logK)};}
+// vectors are [BEST, WORST-magnitude]; extinction is 0 throughout
+function sd(v,w){const u=[v[0],0,-v[1]];const m=w[0]*u[0]+w[1]*u[1]+w[2]*u[2];return Math.sqrt(w[0]*(u[0]-m)**2+w[1]*(u[1]-m)**2+w[2]*(u[2]-m)**2);}
+function norm(v,meth,w){const s=meth==='B'?v[0]:meth==='W'?v[1]:meth==='R'?v[0]+v[1]:sd(v,w);return[v[0]/s,v[1]/s];}
+const ratioOf=v=>v[0]>0?v[1]/v[0]:Infinity;
+
+// one method: every view normalised, credence-weighted sum
+function method(meth){
+  const c=creds(),k=ownK(),w=weights();let B=0,W=0;const parts={};
+  for(const v of VIEWS){const n=norm([1,k[v.id]],meth,w);B+=c[v.id]*n[0];W+=c[v.id]*n[1];parts[v.id]=c[v.id]*n[1];}
+  return{B,W,parts};
+}
+// two readings per view: values relative to CU's own (1, a)
+function readings(){
+  const a=state.a,m=state.m,K=Math.pow(10,state.logK),q=state.q/100,qB=state.qB/100;
+  const nl=[{p:q,v:[1,a*m],s:1},{p:1-q,v:[1/m,a],s:1/m}];
+  const bb=[{p:qB,v:[1,a*K],s:1},{p:1-qB,v:[1/K,a],s:1/K}];
+  const combos=[];
+  for(const x of nl)for(const y of bb){if(x.p>0&&y.p>0)combos.push({p:x.p*y.p,nlu:x,baub:y});}
+  return combos;
+}
+function units(X){
+  const c=creds(),a=state.a;let B=0,W=0;const parts={cu:0,nlu:0,baub:0};
+  for(const cb of readings()){
+    const s=X==='cu'?1:cb[X].s, f=cb.p/s;
+    const vs={cu:[1,a],nlu:cb.nlu.v,baub:cb.baub.v};
+    for(const v of VIEWS){B+=f*c[v.id]*vs[v.id][0];W+=f*c[v.id]*vs[v.id][1];parts[v.id]+=f*c[v.id]*vs[v.id][1];}
+  }
+  return{B,W,parts};
+}
+function unitSet(){const q=state.q/100,qB=state.qB/100;const s=['cu'];if(q>0&&q<1)s.push('nlu');if(qB>0&&qB<1)s.push('baub');return s;}
+function eqsay(){
+  const w=weights(),ids=unitSet();let B=0,W=0;const comps=[];
+  for(const X of ids){const r=units(X);const n=norm([r.B,r.W],'V',w);B+=n[0]/ids.length;W+=n[1]/ids.length;comps.push({id:'u_'+X,R:ratioOf([r.B,r.W])});}
+  return{B,W,comps};
+}
+function vread(){
+  const c=creds(),a=state.a,w=weights();let B=0,W=0;const parts={cu:0,nlu:0,baub:0};
+  for(const cb of readings()){
+    const vs={cu:[1,a],nlu:cb.nlu.v,baub:cb.baub.v};let b=0,x=0;
+    for(const v of VIEWS){b+=c[v.id]*vs[v.id][0];x+=c[v.id]*vs[v.id][1];}
+    const s=sd([b,x],w);B+=cb.p*b/s;W+=cb.p*x/s;
+    for(const v of VIEWS)parts[v.id]+=cb.p*c[v.id]*vs[v.id][1]/s;
+  }
+  return{B,W,parts};
+}
+function even(){
+  const c=creds(),a=state.a,m=state.m,K=Math.pow(10,state.logK),q=state.q/100,qB=state.qB/100;
+  const ln=Math.pow(m,q),lb=Math.pow(K,qB);
+  const vs={cu:[1,a],nlu:[ln/m,a*ln],baub:[lb/K,a*lb]};let B=0,W=0;const parts={};
+  for(const v of VIEWS){B+=c[v.id]*vs[v.id][0];W+=c[v.id]*vs[v.id][1];parts[v.id]=c[v.id]*vs[v.id][1];}
+  return{B,W,parts};
+}
+function mcNorm(){const t=METHODS.reduce((s,x)=>s+(+state.mc[x.id]||0),0);const o={};for(const x of METHODS)o[x.id]=t>0?(+state.mc[x.id]||0)/t:(x.id==='V'?1:0);return o;}
+function spread(per){
+  const a=mcNorm(),w=weights(),k=ownK();let B=0,W=0;
+  for(const x of METHODS){
+    if(!(a[x.id]>0))continue;const v=[per[x.id].B,per[x.id].W];let n;
+    if(state.meta==='cu'){const s=norm([1,k.cu],x.id,w)[0];n=[v[0]/s,v[1]/s];}
+    else n=norm(v,state.meta,w);
+    B+=a[x.id]*n[0];W+=a[x.id]*n[1];
+  }
+  return{B,W,comps:METHODS.map(x=>({id:x.id,R:ratioOf([per[x.id].B,per[x.id].W])}))};
+}
+function computeAll(){
+  const per={};
+  for(const x of METHODS)per[x.id]=method(x.id);
+  per.u_cu=units('cu');per.u_nlu=units('nlu');per.u_baub=units('baub');
+  per.vread=vread();per.eqsay=eqsay();per.even=even();per.spread=spread(per);
+  for(const k in per)per[k].R=ratioOf([per[k].B,per[k].W]);
+  return per;
+}
+
+// ---------- formatting: ballpark, not false precision ----------
+function fmt(R){
+  if(!isFinite(R))return'∞';
+  if(R>=1e6){const e=Math.floor(Math.log10(R));let m=Math.round(R/Math.pow(10,e));let ee=e;if(m>=10){m=1;ee++;}return(m===1?'':m+' × ')+'10<sup>'+ee+'</sup>';}
+  if(R>=100){const e=Math.floor(Math.log10(R))-1;return(Math.round(R/Math.pow(10,e))*Math.pow(10,e)).toLocaleString('en-GB');}
+  if(R>=10)return R.toFixed(0);
+  return R.toFixed(1);
+}
+const fmtPlain=R=>fmt(R).replace(/<sup>(.*?)<\/sup>/,'^$1');
+const pct=x=>x===0?'0%':x<0.001?(x*100).toPrecision(1)+'%':x<0.01?(x*100).toFixed(1)+'%':Math.round(x*100)+'%';
+
+// ---------- controls ----------
+const viewsEl=document.getElementById('views');
+for(const v of VIEWS){
+  let desc='';
+  if(v.id==='cu')desc='Own ratio <i>a</i> (step 3).';
+  if(v.id==='nlu')desc='Bads count <select class="inline-num" id="mIn" aria-label="NLU multiplier"><option value="10">10</option><option value="100">100</option><option value="1000">1,000</option><option value="10000">10,000</option><option value="1000000">1,000,000</option></select> times as much as goods.';
+  if(v.id==='baub')desc='Linear in bads; goods level off. Own ratio 10^<input class="inline-num" type="number" id="logK" min="2" max="100" step="1" style="width:58px" aria-label="Exponent of BAUB’s own ratio">.';
+  viewsEl.insertAdjacentHTML('beforeend','<div class="view"><label class="name" for="c_'+v.id+'">'+v.name+'</label><div class="desc">'+desc+'</div><input type="range" id="c_'+v.id+'" min="0" max="100" step="1"><div class="pct" id="p_'+v.id+'"></div></div>');
+}
+const apprEl=document.getElementById('apprOpts');
+for(const g of GROUPS){
+  apprEl.insertAdjacentHTML('beforeend','<div class="opt-group">'+g.title+'</div>');
+  for(const a of g.items)apprEl.insertAdjacentHTML('beforeend','<label class="opt"><input type="radio" name="appr" value="'+a.id+'"><span>'+a.name+(a.sub?'<small>'+a.sub+'</small>':'')+'</span></label>');
+}
+const mcEl=document.getElementById('mcreds');
+for(const x of METHODS)mcEl.insertAdjacentHTML('beforeend','<div class="mcred"><label for="mc_'+x.id+'">'+x.name+'</label><input type="range" id="mc_'+x.id+'" min="0" max="100" step="1"><span class="pct" id="mcp_'+x.id+'"></span><span class="rv" id="mcr_'+x.id+'"></span></div>');
+
+function syncInputs(){
+  for(const v of VIEWS)document.getElementById('c_'+v.id).value=state.cred[v.id];
+  document.getElementById('mIn').value=String(state.m);
+  document.getElementById('logK').value=state.logK;
+  document.getElementById('qIn').value=state.q;
+  document.getElementById('qBIn').value=state.qB;
+  for(const r of document.querySelectorAll('input[name=appr]'))r.checked=r.value===state.appr;
+  for(const x of METHODS)document.getElementById('mc_'+x.id).value=state.mc[x.id];
+  document.getElementById('metaSel').value=state.meta;
+  document.getElementById('aIn').value=state.a;
+  document.getElementById('wSel').value=state.wmode;
+  document.getElementById('pbIn').value=state.pB;
+  document.getElementById('pwIn').value=state.pW;
+  document.getElementById('costIn').value=state.cost;
+}
+function num(id,lo,hi,fb){const v=parseFloat(document.getElementById(id).value);return isFinite(v)?Math.min(hi,Math.max(lo,v)):fb;}
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id&&t.id.startsWith('c_'))state.cred[t.id.slice(2)]=+t.value;
+  else if(t.id==='mIn')state.m=+t.value;
+  else if(t.id==='logK')state.logK=num('logK',2,100,22);
+  else if(t.id==='qIn')state.q=+t.value;
+  else if(t.id==='qBIn')state.qB=+t.value;
+  else if(t.name==='appr')state.appr=t.value;
+  else if(t.id&&t.id.startsWith('mc_'))state.mc[t.id.slice(3)]=+t.value;
+  else if(t.id==='metaSel')state.meta=t.value;
+  else if(t.id==='aIn')state.a=num('aIn',0.1,20,1);
+  else if(t.id==='wSel')state.wmode=t.value;
+  else if(t.id==='pbIn')state.pB=num('pbIn',0.0001,90,10);
+  else if(t.id==='pwIn')state.pW=num('pwIn',0.000001,50,1);
+  else if(t.id==='costIn')state.cost=num('costIn',0.001,1e30,3);
+  else return;
+  render();save();
+});
+document.addEventListener('change',e=>{if(e.target.matches('select, input[type=number]'))e.target.dispatchEvent(new Event('input',{bubbles:true}));});
+for(const b of document.querySelectorAll('[data-preset]'))b.addEventListener('click',()=>{
+  Object.assign(state,JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(JSON.stringify(PRESETS[b.dataset.preset])));
+  syncInputs();render();save();
+});
+
+// ---------- render ----------
+function bar(label,v,max,prefix){const w=Math.max(1.5,100*v/max);return'<div class="bar-row" title="'+label+': '+fmtPlain(v)+'"><span class="lab">'+label+'</span><span class="track"><span class="fill" style="width:'+w+'%"></span></span><span class="val">'+(prefix||'')+fmt(v)+'</span></div>';}
+function render(){
+  const c=creds();
+  for(const v of VIEWS)document.getElementById('p_'+v.id).textContent=pct(c[v.id]);
+  document.getElementById('qOut').textContent=pct(state.q/100);
+  document.getElementById('qBOut').textContent=pct(state.qB/100);
+  const per=computeAll(),mcn=mcNorm();
+  for(const x of METHODS){document.getElementById('mcp_'+x.id).textContent=pct(mcn[x.id]);document.getElementById('mcr_'+x.id).innerHTML=fmt(per[x.id].R);}
+  document.getElementById('readBlock').classList.toggle('dim',!UNSURE.some(a=>a.id===state.appr));
+  document.getElementById('metaBlock').classList.toggle('dim',state.appr!=='spread');
+  const R=per[state.appr].R;
+  document.getElementById('hero').innerHTML=fmt(R)+'<span class="colon"> : 1</span>';
+  document.getElementById('apprName').textContent=NAME[state.appr];
+  document.getElementById('reads').innerHTML='<li>Cutting the chance of WORST by 1 point is worth raising the chance of BEST by <b>'+fmt(R)+'</b> points.</li>';
+  drawRuler(R);
+
+  const cmp=document.getElementById('cmp');cmp.innerHTML='';
+  for(const g of GROUPS){
+    cmp.insertAdjacentHTML('beforeend','<div class="grp">'+g.title+'</div>');
+    for(const a of g.items){
+      const b=document.createElement('button');b.type='button';b.setAttribute('aria-pressed',String(a.id===state.appr));
+      b.innerHTML='<span>'+SHORT[a.id]+'</span><span class="v">'+fmt(per[a.id].R)+'</span>';
+      b.addEventListener('click',()=>{state.appr=a.id;syncInputs();render();save();});cmp.appendChild(b);
+    }
+  }
+
+  const drive=document.getElementById('drive'),title=document.getElementById('driveTitle'),r=per[state.appr];
+  if(r.comps){
+    title.textContent=state.appr==='spread'?'R under each method':'R in each view’s units';
+    const L=x=>Math.log10(Math.max(1,x));const mx=Math.max(1,...r.comps.map(x=>L(x.R)));
+    drive.innerHTML=r.comps.map(x=>{const w=Math.max(2,100*L(x.R)/mx);return'<div class="bar-row" title="'+SHORT[x.id]+': '+fmtPlain(x.R)+'"><span class="lab">'+SHORT[x.id]+'</span><span class="track"><span class="fill" style="width:'+w+'%"></span></span><span class="val">'+fmt(x.R)+'</span></div>';}).join('')+'<p class="note">Log scale.</p>';
+  }else{
+    title.textContent='What adds to R';
+    const rows=VIEWS.map(v=>({v,x:r.B>0?r.parts[v.id]/r.B:Infinity}));
+    const max=Math.max(1e-12,...rows.filter(x=>isFinite(x.x)).map(x=>x.x));
+    drive.innerHTML=rows.map((x,i)=>bar(x.v.short,x.x,max,i?'+':'')).join('')+'<p class="note">Each view’s share of WORST’s badness, in units of BEST’s value. They sum to <i>R</i>.</p>';
+  }
+
+  // splitting / bargaining
+  const k=ownK(),x=state.cost;let sw=0;
+  for(const v of VIEWS){sw+=c[v.id]*(k[v.id]>x?1:k[v.id]===x?0.5:0);}
+  const mw=R>x?1:R===x?0.5:0;
+  const seg=(f)=>'<span class="track"><span class="seg w" style="width:'+(100*f)+'%"></span><span class="seg b" style="width:'+(100*(1-f))+'%"></span></span>';
+  document.getElementById('alloc').innerHTML=
+    '<div class="bar-row"><span class="lab">Splitting / bargaining</span>'+seg(sw)+'<span class="val">'+pct(sw)+'</span></div>'+
+    '<div class="bar-row"><span class="lab">Maximising at your R</span>'+seg(mw)+'<span class="val">'+pct(mw)+'</span></div>';
+}
+function drawRuler(R){
+  const svg=document.getElementById('ruler');const x0=14,x1=316,maxDec=6,y=22;
+  let s='<line x1="'+x0+'" y1="'+y+'" x2="'+x1+'" y2="'+y+'" stroke="var(--rule)" stroke-width="1"/>';
+  const labs=['1','10','100','1k','10k','100k','≥1M'];
+  for(let d=0;d<=maxDec;d++){const x=x0+(x1-x0)*d/maxDec;s+='<line x1="'+x+'" y1="'+(y-4)+'" x2="'+x+'" y2="'+(y+4)+'" stroke="var(--muted)" stroke-width="1"/><text x="'+x+'" y="'+(y+18)+'" text-anchor="middle">'+labs[d]+'</text>';}
+  const L=isFinite(R)?Math.log10(Math.max(1,R)):maxDec;const xr=x0+(x1-x0)*Math.min(L,maxDec)/maxDec;
+  s+='<line x1="'+x0+'" y1="'+y+'" x2="'+xr+'" y2="'+y+'" stroke="var(--suffer)" stroke-width="3" stroke-linecap="round"/><circle cx="'+xr+'" cy="'+y+'" r="6" fill="var(--suffer)" stroke="var(--surface)" stroke-width="2"/>';
+  s+='<text x="'+x0+'" y="'+(y+34)+'" text-anchor="start">log scale</text>';
+  svg.innerHTML=s;
+}
+syncInputs();render();
+</script>
+</body>
+</html>
